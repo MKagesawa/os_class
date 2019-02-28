@@ -16,7 +16,6 @@ class Process:
         self.maxIOBurst = int(IO)
         self.finishTime = 0
         self.IOtime = 0
-        self.runTime = 0
         self.waitTime = 0
         self.remainingQuantum = 2
         self.remainingCPUTime = int(C)
@@ -84,37 +83,38 @@ with open("random-numbers.txt") as f:
 
 counter = 0
 def randomOS(u, counter):
-    print('u', u, 'counter', counter)
+    # print('u', u, 'counter', counter)
     num = 1 + (int(randomNumbers[int(counter)]) % int(u))
     counter += 1
     return num
 
 # First come first serve
 def FCFS():
-    print("The scheduling algorithm used was First Come First Served")
     processes = []
     readyProcess = []
     time = 0
     finished = False
-    processRunning = False
     processCount = 0
-    cycleCotainBlock = 0
+    cycleContainBlock = 0
+    global counter
+    counter = 0
     for p in sortedInput:
         if len(p) > 0:
             processes.append(Process(p[0], p[1], p[2], p[3], processCount))
             processCount += 1
 
     while (finished == False):
+        if isVerbose:
+            print("Before cycle " + str(time) + ": ", end="")
         readyProcess.clear()
-        print("Before cycle " + str(time) + ": ", end="")
         for p in processes:
             if isVerbose:
                 num = 0
                 if p.status == "running":
-                    num = p.remainingCPUTime
+                    num = p.CPUBurst
                 elif p.status == "blocked":
                     num = p.remainingIOBurst
-                print(p.status + str(num) + " ", end="")
+                print(p.status + " " + str(num) + " ", end="")
         print()
         for p in processes:
             if p.status == "blocked":
@@ -135,7 +135,7 @@ def FCFS():
                     p.turnAroundTime = time - p.arrivalTime
                 elif p.CPUBurst <= 0:
                     p.status = "blocked"
-                    p.remainingIOBurst = randomOS(p.IOtime, counter)
+                    p.remainingIOBurst = randomOS(p.maxIOBurst, counter)
                     p.running = False
                     p.blocked = True
             if p.status == "unstarted" and time >= int(p.arrivalTime):
@@ -143,40 +143,45 @@ def FCFS():
             if p.status == "ready":
                 readyProcess.append(p)
 
-            for p in processes:
-                if p.blocked:
-                    cycleCotainBlock += 1
-                    break
+        processRunning = False
+        for p in processes:
+            if p.running:
+                processRunning = True
 
-            processRunning = False
-            for p in processes:
-                if p.running:
-                    processRunning = True
+        for p in processes:
+            if p.blocked:
+                cycleContainBlock += 1
+                break
 
-            # choose a process to run
-            if not processRunning:
-                if len(readyProcess) != 0:
-                    processRun = readyProcess[0]
-                    del readyProcess[0]
-                    for p in readyProcess:
-                        if p.curWaitTime > processRun.curWaitTime:
+        # choose a process to run
+        if not processRunning:
+            if len(readyProcess) != 0:
+                processRun = readyProcess.pop(0)
+                for p in readyProcess:
+                    if p.curWaitTime > processRun.curWaitTime:
+                        processRun = p
+                    elif p.arrivalTime < processRun.arrivalTime:
+                        processRun = p
+                    elif p.arrivalTime == processRun.arrivalTime:
+                        if p.processID < processRun.processID:
                             processRun = p
-                        elif p.arrivalTime < processRun.arrivalTime:
-                            processRun = p
-                        elif p.arrivalTime == processRun.arrivalTime:
-                            if p.processID < processRun.processID:
-                                processRun = p
 
-                    # Increment waiting time for process not running
-                    for p in readyProcess:
-                        if processRun.processID != p.processID:
-                            p.curWaitTime += 1
+                # Increment waiting time for process not running
+                for p in readyProcess:
+                    if processRun != p:
+                        p.curWaitTime += 1
 
-                    # Run process
-                    processRun.status = "running"
-                    processRun.curWaitTime = 0
-                    processRun.CPUBurst = randomOS(processRun.maxCPUBurst, counter)
-                    processRun.running = True
+                # Run process
+                processRun.status = "running"
+                processRun.curWaitTime = 0
+                processRun.CPUBurst = randomOS(processRun.maxCPUBurst, counter)
+                processRun.running = True
+
+        for p in processes:
+            if p.status == "ready":
+                p.waitTime += 1
+            if p.status == "blocked":
+                p.IOtime += 1
 
         # check if all process finished
         finished = True
@@ -191,22 +196,25 @@ def FCFS():
     avgTurnaround = 0
     avgWaiting = 0
     finishTime = time - 1
+    print("The scheduling algorithm used was First Come First Served")
     for p in processes:
-        print("Process ", p.processNum)
-        print("(A, B, C, IO) = (", p.arrivalTime, ",", p.maxCPUBurst, ",", p.remainingCPUTime, ",", p.maxIOBurst, ")")
-        print("Finishing time: ", p.finishTime)
-        print("Turnaround time: ", p.turnAroundTime)
-        print("Waiting time: ", p.waitTime)
-        totalRunTime += p.runTime
+        print("Process ", p.processNum, ":")
+        print("\t(A, B, C, IO) = (", p.arrivalTime, ",", p.maxCPUBurst, ",", p.totalCPUTime, ",", p.maxIOBurst, ")")
+        print("\tFinishing time: ", p.finishTime)
+        print("\tTurnaround time: ", p.turnAroundTime)
+        print("\tI/O time: ", p.IOtime)
+        print("\tWaiting time: ", p.waitTime)
+        totalRunTime += p.totalCPUTime
         avgTurnaround += p.turnAroundTime
         avgWaiting += p.waitTime
 
-    print("Finishing time: ", finishTime)
-    print("CPU Utilization: ", totalRunTime/finishTime)
-    print("I/O Utilization: ", cycleCotainBlock/finishTime)
-    print("Throughput: ", (100 / finishTime * len(processes)), "processes per hundred cycles")
-    print("Average turnaround time: ", avgTurnaround/len(processes))
-    print("Average waiting time: ", avgWaiting/len(avgWaiting))
+    print("Suymmary Data: ")
+    print("\tFinishing time: ", finishTime)
+    print("\tCPU Utilization: ", totalRunTime/finishTime)
+    print("\tI/O Utilization: ", cycleContainBlock/finishTime)
+    print("\tThroughput: ", (100 / finishTime * len(processes)), "processes per hundred cycles")
+    print("\tAverage turnaround time: ", avgTurnaround/len(processes))
+    print("\tAverage waiting time: ", avgWaiting/len(processes))
 
 
 # Round Robin
