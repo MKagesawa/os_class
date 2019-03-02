@@ -22,7 +22,6 @@ class Process:
         self.CPUBurst = 0
         self.remainingIOBurst = 0
         self.status = "unstarted"
-        self.processID = 0
         self.turnAroundTime = 0
         self.running = False
         self.blocked = False
@@ -84,7 +83,7 @@ with open("random-numbers.txt") as f:
 counter = 0
 def randomOS(u, counter):
     num = 1 + (int(randomNumbers[int(counter)]) % int(u))
-    # print(int(randomNumbers[int(counter)]))
+    print(int(randomNumbers[int(counter)]))
     # print(num)
     return num
 
@@ -164,9 +163,9 @@ def FCFS():
                         processRun = p
                     elif p.curWaitTime > processRun.curWaitTime:
                         processRun = p
-                    # elif p.arrivalTime == processRun.arrivalTime:
-                    #     if p.processID < processRun.processID:
-                    #         processRun = p
+                    elif p.arrivalTime == processRun.arrivalTime:
+                        if p.processNum < processRun.processNum:
+                            processRun = p
 
                 # Increment waiting time for process not running
                 for p in readyProcess:
@@ -231,14 +230,17 @@ def RR():
     cycleContainBlock = 0
     global counter
     counter = 0
+    turnID = 0
     for p in sortedInput:
         if len(p) > 0:
             processes.append(Process(p[0], p[1], p[2], p[3], processCount))
             processCount += 1
 
     while (finished == False):
+        readyProcess.clear()
         if isVerbose:
             print("Before cycle " + str(time) + ": ", end="")
+        readyProcess.clear()
         for p in processes:
             if isVerbose:
                 num = 0
@@ -266,17 +268,18 @@ def RR():
                     p.running = False
                     p.finishTime = time
                     p.turnAroundTime = time - p.arrivalTime
+                elif p.remainingQuantum <= 0:
+                    p.status = "ready"
+                    p.running = False
                 elif p.CPUBurst <= 0:
                     p.status = "blocked"
                     p.remainingIOBurst = randomOS(p.maxIOBurst, counter)
                     counter += 1
                     p.running = False
                     p.blocked = True
-                elif p.remainingQuantum <= 0:
-                    p.status = "ready"
             if p.status == "unstarted" and time >= int(p.arrivalTime):
                 p.status = "ready"
-            if p.status == "ready" and p not in readyProcess:
+            if p.status == "ready":
                 readyProcess.append(p)
 
         processRunning = False
@@ -292,19 +295,34 @@ def RR():
         # choose a process to run
         if not processRunning:
             if len(readyProcess) != 0:
-                processRun = readyProcess.pop(0)
+                processRun = readyProcess[0]
+                for p in readyProcess:
+                    # if turnID == p.processNum:
+                    #     processRun = p
+                    if p.arrivalTime < processRun.arrivalTime:
+                        processRun = p
+                    elif p.curWaitTime > processRun.curWaitTime:
+                        processRun = p
+                    elif p.arrivalTime == processRun.arrivalTime:
+                        if p.processNum < processRun.processNum:
+                            processRun = p
 
                 # Increment waiting time for process not running
                 for p in readyProcess:
                     if processRun != p:
                         p.curWaitTime += 1
+                        # print("pID", p.processNum, "curwait", p.curWaitTime)
 
                 # Run process
                 processRun.status = "running"
                 processRun.curWaitTime = 0
-                processRun.CPUBurst = max(randomOS(processRun.maxCPUBurst, counter), 2)
+                processRun.remainingQuantum = 2
+                processRun.CPUBurst = min(randomOS(processRun.maxCPUBurst, counter), 2)
                 counter += 1
                 processRun.running = True
+                turnID += 1
+                if turnID > processCount:
+                    turnID = 0
 
         for p in processes:
             if p.status == "ready":
@@ -320,12 +338,11 @@ def RR():
 
         time += 1
 
-
     totalRunTime = 0
     avgTurnaround = 0
     avgWaiting = 0
     finishTime = time - 1
-    print("The scheduling algorithm used was Round Robbin")
+    print("The scheduling algorithm used was First Come First Served")
     for p in processes:
         print("Process ", p.processNum, ":")
         print("\t(A, B, C, IO) = (", p.arrivalTime, ",", p.maxCPUBurst, ",", p.totalCPUTime, ",", p.maxIOBurst, ")")
