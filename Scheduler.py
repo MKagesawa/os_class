@@ -83,9 +83,9 @@ with open("random-numbers.txt") as f:
 
 counter = 0
 def randomOS(u, counter):
-    # print('u', u, 'counter', counter)
     num = 1 + (int(randomNumbers[int(counter)]) % int(u))
-    counter += 1
+    # print(int(randomNumbers[int(counter)]))
+    # print(num)
     return num
 
 # First come first serve
@@ -104,6 +104,8 @@ def FCFS():
             processCount += 1
 
     while (finished == False):
+        if time > 500:
+            break
         if isVerbose:
             print("Before cycle " + str(time) + ": ", end="")
         readyProcess.clear()
@@ -136,6 +138,7 @@ def FCFS():
                 elif p.CPUBurst <= 0:
                     p.status = "blocked"
                     p.remainingIOBurst = randomOS(p.maxIOBurst, counter)
+                    counter += 1
                     p.running = False
                     p.blocked = True
             if p.status == "unstarted" and time >= int(p.arrivalTime):
@@ -175,6 +178,7 @@ def FCFS():
                 processRun.status = "running"
                 processRun.curWaitTime = 0
                 processRun.CPUBurst = randomOS(processRun.maxCPUBurst, counter)
+                counter += 1
                 processRun.running = True
 
         for p in processes:
@@ -224,18 +228,263 @@ def RR():
 
 
 def Uniprogrammed():
-    print("The scheduling algorithm used was Uniprocessor")
+    processes = []
+    readyProcess = []
+    processToRun = 0
+    time = 0
+    finished = False
+    processCount = 0
+    cycleContainBlock = 0
+    global counter
+    counter = 0
+    for p in sortedInput:
+        if len(p) > 0:
+            processes.append(Process(p[0], p[1], p[2], p[3], processCount))
+            processCount += 1
 
-    pass
+    while (finished == False):
+        if isVerbose:
+            print("Before cycle " + str(time) + ": ", end="")
+        readyProcess.clear()
+        for p in processes:
+            if isVerbose:
+                num = 0
+                if p.status == "running":
+                    num = p.CPUBurst
+                elif p.status == "blocked":
+                    num = p.remainingIOBurst
+                print(p.status + " " + str(num) + " ", end="")
+                print()
+        for p in processes:
+            if p.status == "blocked":
+                p.remainingIOBurst -= 1
+                if (p.remainingIOBurst <= 0):
+                    p.status = "ready"
+                    p.blocked = False
+                else:
+                    p.blocked = True
+            if p.status == "running":
+                p.remainingCPUTime -= 1
+                p.CPUBurst -= 1
+                p.running = True
+                if p.remainingCPUTime <= 0:
+                    p.status = "terminated"
+                    processToRun += 1
+                    p.running = False
+                    p.finishTime = time
+                    p.turnAroundTime = time - p.arrivalTime
+                elif p.CPUBurst <= 0:
+                    p.status = "blocked"
+                    p.remainingIOBurst = randomOS(p.maxIOBurst, counter)
+                    counter += 1
+                    p.running = False
+                    p.blocked = True
+            if p.status == "unstarted" and time >= int(p.arrivalTime):
+                p.status = "ready"
+            if p.status == "ready":
+                readyProcess.append(p)
+
+        processRunning = False
+        for p in processes:
+            if p.running:
+                processRunning = True
+
+        for p in processes:
+            if p.blocked:
+                cycleContainBlock += 1
+                break
+
+        # choose a process to run
+        if not processRunning:
+            if len(readyProcess) != 0:
+                processRun = readyProcess.pop(0)
+                for p in readyProcess:
+                    if p.arrivalTime < processRun.arrivalTime:
+                        processRun = p
+                    elif p.arrivalTime == processRun.arrivalTime:
+                        if p.processID < processRun.processID:
+                            processRun = p
+
+                # Increment waiting time for process not running
+                for p in readyProcess:
+                    if processRun != p:
+                        p.curWaitTime += 1
+
+                if processToRun == processRun.processNum:
+                    # Run process
+                    processRun.status = "running"
+                    processRun.curWaitTime = 0
+                    processRun.CPUBurst = randomOS(processRun.maxCPUBurst, counter)
+                    counter += 1
+                    processRun.running = True
+
+        for p in processes:
+            if p.status == "ready":
+                p.waitTime += 1
+            if p.status == "blocked":
+                p.IOtime += 1
+
+        # check if all process finished
+        finished = True
+        for p in processes:
+            if p.status != "terminated":
+                finished = False
+
+        time += 1
+
+
+    totalRunTime = 0
+    avgTurnaround = 0
+    avgWaiting = 0
+    finishTime = time - 1
+    print("The scheduling algorithm used was Uniprocessor")
+    for p in processes:
+        print("Process ", p.processNum, ":")
+        print("\t(A, B, C, IO) = (", p.arrivalTime, ",", p.maxCPUBurst, ",", p.totalCPUTime, ",", p.maxIOBurst, ")")
+        print("\tFinishing time: ", p.finishTime)
+        print("\tTurnaround time: ", p.turnAroundTime)
+        print("\tI/O time: ", p.IOtime)
+        print("\tWaiting time: ", p.waitTime)
+        totalRunTime += p.totalCPUTime
+        avgTurnaround += p.turnAroundTime
+        avgWaiting += p.waitTime
+
+    print("Suymmary Data: ")
+    print("\tFinishing time: ", finishTime)
+    print("\tCPU Utilization: ", totalRunTime/finishTime)
+    print("\tI/O Utilization: ", cycleContainBlock/finishTime)
+    print("\tThroughput: ", (100 / finishTime * len(processes)), "processes per hundred cycles")
+    print("\tAverage turnaround time: ", avgTurnaround/len(processes))
+    print("\tAverage waiting time: ", avgWaiting/len(processes))
 
 
 # Shortest execution time first
 def SJF():
+    processes = []
+    readyProcess = []
+    time = 0
+    finished = False
+    processCount = 0
+    cycleContainBlock = 0
+    global counter
+    counter = 0
+    for p in sortedInput:
+        if len(p) > 0:
+            processes.append(Process(p[0], p[1], p[2], p[3], processCount))
+            processCount += 1
+
+    while (finished == False):
+        if isVerbose:
+            print("Before cycle " + str(time) + ": ", end="")
+        readyProcess.clear()
+        for p in processes:
+            if isVerbose:
+                num = 0
+                if p.status == "running":
+                    num = p.CPUBurst
+                elif p.status == "blocked":
+                    num = p.remainingIOBurst
+                print(p.status + " " + str(num) + " ", end="")
+        print()
+        for p in processes:
+            if p.status == "blocked":
+                p.remainingIOBurst -= 1
+                if (p.remainingIOBurst <= 0):
+                    p.status = "ready"
+                    p.blocked = False
+                else:
+                    p.blocked = True
+            if p.status == "running":
+                p.remainingCPUTime -= 1
+                p.CPUBurst -= 1
+                p.running = True
+                if p.remainingCPUTime <= 0:
+                    p.status = "terminated"
+                    p.running = False
+                    p.finishTime = time
+                    p.turnAroundTime = time - p.arrivalTime
+                elif p.CPUBurst <= 0:
+                    p.status = "blocked"
+                    p.remainingIOBurst = randomOS(p.maxIOBurst, counter)
+                    counter += 1
+                    p.running = False
+                    p.blocked = True
+            if p.status == "unstarted" and time >= int(p.arrivalTime):
+                p.status = "ready"
+            if p.status == "ready":
+                readyProcess.append(p)
+
+        processRunning = False
+        for p in processes:
+            if p.running:
+                processRunning = True
+
+        for p in processes:
+            if p.blocked:
+                cycleContainBlock += 1
+                break
+
+        # choose a process to run
+        if not processRunning:
+            if len(readyProcess) != 0:
+                processRun = readyProcess.pop(0)
+                for p in readyProcess:
+                    if p.remainingCPUTime < processRun.remainingCPUTime:
+                        processRun = p
+
+                # Increment waiting time for process not running
+                for p in readyProcess:
+                    if processRun != p:
+                        p.curWaitTime += 1
+
+                # Run process
+                processRun.status = "running"
+                processRun.curWaitTime = 0
+                processRun.CPUBurst = randomOS(processRun.maxCPUBurst, counter)
+                counter += 1
+                processRun.running = True
+
+        for p in processes:
+            if p.status == "ready":
+                p.waitTime += 1
+            if p.status == "blocked":
+                p.IOtime += 1
+
+        # check if all process finished
+        finished = True
+        for p in processes:
+            if p.status != "terminated":
+                finished = False
+
+        time += 1
+
+
+    totalRunTime = 0
+    avgTurnaround = 0
+    avgWaiting = 0
+    finishTime = time - 1
     print("The scheduling algorithm used was Shortest Job First")
-    pass
+    for p in processes:
+        print("Process ", p.processNum, ":")
+        print("\t(A, B, C, IO) = (", p.arrivalTime, ",", p.maxCPUBurst, ",", p.totalCPUTime, ",", p.maxIOBurst, ")")
+        print("\tFinishing time: ", p.finishTime)
+        print("\tTurnaround time: ", p.turnAroundTime)
+        print("\tI/O time: ", p.IOtime)
+        print("\tWaiting time: ", p.waitTime)
+        totalRunTime += p.totalCPUTime
+        avgTurnaround += p.turnAroundTime
+        avgWaiting += p.waitTime
+
+    print("Suymmary Data: ")
+    print("\tFinishing time: ", finishTime)
+    print("\tCPU Utilization: ", totalRunTime/finishTime)
+    print("\tI/O Utilization: ", cycleContainBlock/finishTime)
+    print("\tThroughput: ", (100 / finishTime * len(processes)), "processes per hundred cycles")
+    print("\tAverage turnaround time: ", avgTurnaround/len(processes))
+    print("\tAverage waiting time: ", avgWaiting/len(processes))
 
 
-FCFS()
+# FCFS()
 # RR()
 # Uniprogrammed()
-# SJF()
+SJF()
