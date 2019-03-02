@@ -104,6 +104,7 @@ def FCFS():
             processCount += 1
 
     while (finished == False):
+        readyProcess.clear()
         if isVerbose:
             print("Before cycle " + str(time) + ": ", end="")
         readyProcess.clear()
@@ -128,7 +129,6 @@ def FCFS():
                 p.remainingCPUTime -= 1
                 p.CPUBurst -= 1
                 p.running = True
-                p.remainingQuantum -= 1
                 if p.remainingCPUTime <= 0:
                     p.status = "terminated"
                     p.running = False
@@ -140,8 +140,6 @@ def FCFS():
                     counter += 1
                     p.running = False
                     p.blocked = True
-                elif p.remainingQuantum <= 0:
-                    p.status = "ready"
             if p.status == "unstarted" and time >= int(p.arrivalTime):
                 p.status = "ready"
             if p.status == "ready":
@@ -160,25 +158,26 @@ def FCFS():
         # choose a process to run
         if not processRunning:
             if len(readyProcess) != 0:
-                processRun = readyProcess.pop(0)
+                processRun = readyProcess[0]
                 for p in readyProcess:
-                    if p.curWaitTime > processRun.curWaitTime:
+                    if p.arrivalTime < processRun.arrivalTime:
                         processRun = p
-                    elif p.arrivalTime < processRun.arrivalTime:
+                    elif p.curWaitTime > processRun.curWaitTime:
                         processRun = p
-                    elif p.arrivalTime == processRun.arrivalTime:
-                        if p.processID < processRun.processID:
-                            processRun = p
+                    # elif p.arrivalTime == processRun.arrivalTime:
+                    #     if p.processID < processRun.processID:
+                    #         processRun = p
 
                 # Increment waiting time for process not running
                 for p in readyProcess:
                     if processRun != p:
                         p.curWaitTime += 1
+                        # print("pID", p.processNum, "curwait", p.curWaitTime)
 
                 # Run process
                 processRun.status = "running"
                 processRun.curWaitTime = 0
-                processRun.CPUBurst = max(randomOS(processRun.maxCPUBurst, counter), 2)
+                processRun.CPUBurst = randomOS(processRun.maxCPUBurst, counter)
                 counter += 1
                 processRun.running = True
 
@@ -260,6 +259,7 @@ def RR():
             if p.status == "running":
                 p.remainingCPUTime -= 1
                 p.CPUBurst -= 1
+                p.remainingQuantum -= 1
                 p.running = True
                 if p.remainingCPUTime <= 0:
                     p.status = "terminated"
@@ -272,6 +272,8 @@ def RR():
                     counter += 1
                     p.running = False
                     p.blocked = True
+                elif p.remainingQuantum <= 0:
+                    p.status = "ready"
             if p.status == "unstarted" and time >= int(p.arrivalTime):
                 p.status = "ready"
             if p.status == "ready" and p not in readyProcess:
@@ -300,7 +302,7 @@ def RR():
                 # Run process
                 processRun.status = "running"
                 processRun.curWaitTime = 0
-                processRun.CPUBurst = randomOS(processRun.maxCPUBurst, counter)
+                processRun.CPUBurst = max(randomOS(processRun.maxCPUBurst, counter), 2)
                 counter += 1
                 processRun.running = True
 
@@ -603,6 +605,6 @@ def SJF():
 
 
 # FCFS()
-# RR()
+RR()
 # Uniprogrammed()
 # SJF()
