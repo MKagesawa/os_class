@@ -237,7 +237,7 @@ def RR():
             processCount += 1
 
     while (finished == False):
-        readyProcess.clear()
+        # readyProcess.clear()
         if isVerbose:
             print("Before cycle " + str(time) + ": ", end="")
         readyProcess.clear()
@@ -268,7 +268,7 @@ def RR():
                     p.running = False
                     p.finishTime = time
                     p.turnAroundTime = time - p.arrivalTime
-                elif p.remainingQuantum <= 0:
+                elif p.remainingQuantum <= 0 and p.CPUBurst >= 0 :
                     p.status = "ready"
                     p.running = False
                 elif p.CPUBurst <= 0:
@@ -299,13 +299,13 @@ def RR():
                 for p in readyProcess:
                     # if turnID == p.processNum:
                     #     processRun = p
-                    if p.arrivalTime < processRun.arrivalTime:
+                    # if p.arrivalTime < processRun.arrivalTime:
+                    #     processRun = p
+                    if p.curWaitTime > processRun.curWaitTime:
                         processRun = p
-                    elif p.curWaitTime > processRun.curWaitTime:
-                        processRun = p
-                    elif p.arrivalTime == processRun.arrivalTime:
-                        if p.processNum < processRun.processNum:
-                            processRun = p
+                    # elif p.arrivalTime == processRun.arrivalTime:
+                    #     if p.processNum < processRun.processNum:
+                    #         processRun = p
 
                 # Increment waiting time for process not running
                 for p in readyProcess:
@@ -439,7 +439,7 @@ def Uniprogrammed():
                     if p.arrivalTime < processRun.arrivalTime:
                         processRun = p
                     elif p.arrivalTime == processRun.arrivalTime:
-                        if p.processID < processRun.processID:
+                        if p.processNum < processRun.processNum:
                             processRun = p
 
                 # Increment waiting time for process not running
