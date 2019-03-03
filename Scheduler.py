@@ -83,7 +83,7 @@ with open("random-numbers.txt") as f:
 counter = 0
 def randomOS(u, counter):
     num = 1 + (int(randomNumbers[int(counter)]) % int(u))
-    print(int(randomNumbers[int(counter)]))
+    # print(int(randomNumbers[int(counter)]))
     # print(num)
     return num
 
@@ -245,7 +245,7 @@ def RR():
             if isVerbose:
                 num = 0
                 if p.status == "running":
-                    num = p.CPUBurst
+                    num = min(p.CPUBurst, p.remainingQuantum)
                 elif p.status == "blocked":
                     num = p.remainingIOBurst
                 print(p.status + " " + str(num) + " ", end="")
@@ -280,6 +280,7 @@ def RR():
             if p.status == "unstarted" and time >= int(p.arrivalTime):
                 p.status = "ready"
             if p.status == "ready":
+                # if p not in readyProcess:
                 readyProcess.append(p)
 
         processRunning = False
@@ -317,7 +318,7 @@ def RR():
                 processRun.status = "running"
                 processRun.curWaitTime = 0
                 processRun.remainingQuantum = 2
-                processRun.CPUBurst = min(randomOS(processRun.maxCPUBurst, counter), 2)
+                processRun.CPUBurst = randomOS(processRun.maxCPUBurst, counter)
                 counter += 1
                 processRun.running = True
                 turnID += 1
@@ -342,7 +343,7 @@ def RR():
     avgTurnaround = 0
     avgWaiting = 0
     finishTime = time - 1
-    print("The scheduling algorithm used was First Come First Served")
+    print("The scheduling algorithm used was Round Robin")
     for p in processes:
         print("Process ", p.processNum, ":")
         print("\t(A, B, C, IO) = (", p.arrivalTime, ",", p.maxCPUBurst, ",", p.totalCPUTime, ",", p.maxIOBurst, ")")
