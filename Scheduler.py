@@ -280,8 +280,8 @@ def RR():
             if p.status == "unstarted" and time >= int(p.arrivalTime):
                 p.status = "ready"
             if p.status == "ready":
-                # if p not in readyProcess:
-                readyProcess.append(p)
+                if p not in readyProcess:
+                    readyProcess.append(p)
 
         processRunning = False
         for p in processes:
@@ -296,7 +296,7 @@ def RR():
         # choose a process to run
         if not processRunning:
             if len(readyProcess) != 0:
-                processRun = readyProcess[0]
+                processRun = readyProcess.pop(0)
                 for p in readyProcess:
                     # if turnID == p.processNum:
                     #     processRun = p
